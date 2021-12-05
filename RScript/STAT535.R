@@ -9,7 +9,7 @@ seasons = tables_html[grep("<td class=\"dtr1 dtc", tables_html)][1:24]
 
 # Fetch the information of the first 20 teams
 for (i in 1 : 20){
-  expression = sprintf('rank_%d = tables_html[grep("<td class=\\\"dtr%d dtc", tables_html)][1:24]', i, i)
+  expression = sprintf('rank_%d = tables_html[grep("<td class=\\\"dtr%d dtc", tables_html)][1:24]', i, i+1)
   eval(parse(text = expression))
 }
 
