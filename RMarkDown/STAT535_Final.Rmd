@@ -37,44 +37,29 @@ set.seed(4321)
 ## Web Scraping ############################# 
 
 ```{r, echo=TRUE}
+# set the working directory to use relative path
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 # Read the raw data
-tables_html = readLines("/Users/chenqi/Desktop/535 final/YechengCao/Tables.html", warn = FALSE)
+tables_html = readLines("../Data/Tables.html", warn = FALSE)
 
 # Seasons
 seasons = tables_html[grep("<td class=\"dtr1 dtc", tables_html)][1:24]
 
-# Champion teams with corresponding points
-rank_1 = tables_html[grep("<td class=\"dtr2 dtc", tables_html)][1:24]
-
-# Runner-ups teams
-rank_2 = tables_html[grep("<td class=\"dtr3 dtc", tables_html)][1:24]
-
-# All rankings below with same technique
-rank_3 = tables_html[grep("<td class=\"dtr4 dtc", tables_html)][1:24]
-rank_4 = tables_html[grep("<td class=\"dtr5 dtc", tables_html)][1:24]
-rank_5 = tables_html[grep("<td class=\"dtr6 dtc", tables_html)][1:24]
-rank_6 = tables_html[grep("<td class=\"dtr7 dtc", tables_html)][1:24]
-rank_7 = tables_html[grep("<td class=\"dtr8 dtc", tables_html)][1:24]
-rank_8 = tables_html[grep("<td class=\"dtr9 dtc", tables_html)][1:24]
-rank_9 = tables_html[grep("<td class=\"dtr10 dtc", tables_html)][1:24]
-rank_10 = tables_html[grep("<td class=\"dtr11 dtc", tables_html)][1:24]
-rank_11 = tables_html[grep("<td class=\"dtr12 dtc", tables_html)][1:24]
-rank_12 = tables_html[grep("<td class=\"dtr13 dtc", tables_html)][1:24]
-rank_13 = tables_html[grep("<td class=\"dtr14 dtc", tables_html)][1:24]
-rank_14 = tables_html[grep("<td class=\"dtr15 dtc", tables_html)][1:24]
-rank_15 = tables_html[grep("<td class=\"dtr16 dtc", tables_html)][1:24]
-rank_16 = tables_html[grep("<td class=\"dtr17 dtc", tables_html)][1:24]
-rank_17 = tables_html[grep("<td class=\"dtr18 dtc", tables_html)][1:24]
-rank_18 = tables_html[grep("<td class=\"dtr19 dtc", tables_html)][1:24]
-rank_19 = tables_html[grep("<td class=\"dtr20 dtc", tables_html)][1:24]
-rank_20 = tables_html[grep("<td class=\"dtr21 dtc", tables_html)][1:24]
+# Fetch the information of the first 20 teams
+for (i in 1 : 20){
+  expression = sprintf('rank_%d = tables_html[grep("<td class=\\\"dtr%d dtc", tables_html)][1:24]', i, i)
+  eval(parse(text = expression))
+}
 ```
 
 ```{r, echo=TRUE}
-data_processing_lead = function(x){
+# preprocess data
+# only keep the string with more than n characters
+data_processing = function(x, n){
   temp = vector()
   for(i in 1:length(x)){
-    if(sum(nchar(x[i]))>28){ #if there are more than 28 chars, those lines are either team names or pts that we want
+    if(nchar(x[i])>n){ #if there are more than n chars, those lines are either team names or pts that we want
       temp[i] = x[i]
     }
     temp = na.exclude(temp) # remove all NAs
@@ -84,54 +69,22 @@ data_processing_lead = function(x){
   done = temp[1:length(temp)] # keep the information we want
   return(done)
 }
-rank_1_clear = data_processing_lead(rank_1)
-rank_2_clear = data_processing_lead(rank_2)
-rank_3_clear = data_processing_lead(rank_3)
-rank_4_clear = data_processing_lead(rank_4)
-rank_5_clear = data_processing_lead(rank_5)
-rank_6_clear = data_processing_lead(rank_6)
-rank_7_clear = data_processing_lead(rank_7)
-rank_8_clear = data_processing_lead(rank_8)
 
-data_processing_lag = function(x){ # the only difference is the "if" statement because the lines start from rank 9 teams are longer, i.e. dtr10 and so on have 2 digits 
-  temp = vector()
-  for(i in 1:length(x)){
-    if(sum(nchar(x[i]))>29){ #if there are more than 29 chars, those lines are either team names or pts that we want
-      temp[i] = x[i]
-    }
-    temp = na.exclude(temp) # remove all NAs
+# Preprocess data
+  seasons_clear = data_processing(seasons, 29)
+  # rank 1 - 8
+  for (i in 1 : 8){
+  expression = sprintf('rank_%d_clear = data_processing(rank_%d, %d)', i, i, 28)
+    eval(parse(text = expression))
   }
-  pattern = "(.*)\">|</td>"
-  temp = gsub(pattern, "", temp) # remove useless strings
-  done = temp[1:length(temp)] # keep the information we want
-  return(done)
-}
-seasons_clear = data_processing_lag(seasons)
-rank_9_clear = data_processing_lag(rank_9)
-rank_10_clear = data_processing_lag(rank_10)
-rank_11_clear = data_processing_lag(rank_11)
-rank_12_clear = data_processing_lag(rank_12)
-rank_13_clear = data_processing_lag(rank_13)
-rank_14_clear = data_processing_lag(rank_14)
-rank_15_clear = data_processing_lag(rank_15)
-rank_16_clear = data_processing_lag(rank_16)
-rank_17_clear = data_processing_lag(rank_17)
-rank_18_clear = data_processing_lag(rank_18)
-rank_19_clear = data_processing_lag(rank_19)
-rank_20_clear = data_processing_lag(rank_20)
-
-# Remove the first element that represents the ranking starting from rank 10 teams
-rank_10_clear = rank_10_clear[-1]
-rank_11_clear = rank_11_clear[-1]
-rank_12_clear = rank_12_clear[-1]
-rank_13_clear = rank_13_clear[-1]
-rank_14_clear = rank_14_clear[-1]
-rank_15_clear = rank_15_clear[-1]
-rank_16_clear = rank_16_clear[-1]
-rank_17_clear = rank_17_clear[-1]
-rank_18_clear = rank_18_clear[-1]
-rank_19_clear = rank_19_clear[-1]
-rank_20_clear = rank_20_clear[-1]
+  # rank 9 - 20
+  for (i in 9 : 20){
+    # remove the rank column
+    expression = sprintf('rank_%d = rank_%d[-1]', i, i)
+    eval(parse(text = expression))
+    expression = sprintf('rank_%d_clear = data_processing(rank_%d, %d)', i, i, 29)
+    eval(parse(text = expression))
+  }
 
 # Check all vectors are in correct length so that we could put them into a data frame
 all.equal(
@@ -195,11 +148,11 @@ head(tables)
 
 ```{r, echo=TRUE}
 # Read the raw data for matches
-result_2021_html = readLines("/Users/chenqi/Desktop/535 final/YechengCao/2020_21.html", warn = FALSE)
-result_1920_html = readLines("/Users/chenqi/Desktop/535 final/YechengCao/2019_20.html", warn = FALSE)
-result_1819_html = readLines("/Users/chenqi/Desktop/535 final/YechengCao/2018_19.html", warn = FALSE)
-result_1718_html = readLines("/Users/chenqi/Desktop/535 final/YechengCao/2017_18.html", warn = FALSE)
-result_1617_html = readLines("/Users/chenqi/Desktop/535 final/YechengCao/2016_17.html", warn = FALSE)
+result_2021_html = readLines("../Data/2020_21.html", warn = FALSE)
+result_1920_html = readLines("../Data/2019_20.html", warn = FALSE)
+result_1819_html = readLines("../Data/2018_19.html", warn = FALSE)
+result_1718_html = readLines("../Data/2017_18.html", warn = FALSE)
+result_1617_html = readLines("../Data/2016_17.html", warn = FALSE)
 ```
 
 ```{r, echo=TRUE}
