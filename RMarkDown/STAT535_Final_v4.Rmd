@@ -1,0 +1,592 @@
+---
+title: "STAT535_Final_Project"
+author: "Yecheng Cao, Qi Chen, Travis Xiaoyu Zhao"
+date: "11/28/2021"
+output: html_document
+---
+* [Introduction]
+  * [Objectives]
+  * [Web Scraping]
+* [Prediction]
+  * [Fits Poisson Distribution]
+
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(vcd)
+rm(list = ls())
+```
+
+```{r, echo=FALSE}
+set.seed(4321)
+```
+
+# Introduction {-}
+
+## Objectives ############################# 
+
+<br>
+**Based on the English Premier League Tables and all Game Day results in past 5 seasons (2016-17 season until 2020-21 season), we would like to use a few techniques to predict the champion in this season 2021-22.**
+<br>
+
+<br>
+**We scraped the data from myfootballfacts.com and fixturedownload.com/sport/football. Here are the attached original htmls. (https://www.myfootballfacts.com/premier-league/all-time-premier-league/premier-league-ladders/) and (https://fixturedownload.com/sport/football)**
+<br>
+
+
+
+## Web Scraping ############################# 
+
+```{r, echo=TRUE}
+# Read the raw data
+#tables_html = readLines("/Users/yechengcao/Desktop/535/Final/Tables.html", warn = FALSE)
+tables_html = readLines("Tables.html", warn = FALSE)
+
+# Seasons
+seasons = tables_html[grep("<td class=\"dtr1 dtc", tables_html)][1:24]
+
+# Champion teams with corresponding points
+rank_1 = tables_html[grep("<td class=\"dtr2 dtc", tables_html)][1:24]
+
+# Runner-ups teams
+rank_2 = tables_html[grep("<td class=\"dtr3 dtc", tables_html)][1:24]
+
+# All rankings below with same technique
+rank_3 = tables_html[grep("<td class=\"dtr4 dtc", tables_html)][1:24]
+rank_4 = tables_html[grep("<td class=\"dtr5 dtc", tables_html)][1:24]
+rank_5 = tables_html[grep("<td class=\"dtr6 dtc", tables_html)][1:24]
+rank_6 = tables_html[grep("<td class=\"dtr7 dtc", tables_html)][1:24]
+rank_7 = tables_html[grep("<td class=\"dtr8 dtc", tables_html)][1:24]
+rank_8 = tables_html[grep("<td class=\"dtr9 dtc", tables_html)][1:24]
+rank_9 = tables_html[grep("<td class=\"dtr10 dtc", tables_html)][1:24]
+rank_10 = tables_html[grep("<td class=\"dtr11 dtc", tables_html)][1:24]
+rank_11 = tables_html[grep("<td class=\"dtr12 dtc", tables_html)][1:24]
+rank_12 = tables_html[grep("<td class=\"dtr13 dtc", tables_html)][1:24]
+rank_13 = tables_html[grep("<td class=\"dtr14 dtc", tables_html)][1:24]
+rank_14 = tables_html[grep("<td class=\"dtr15 dtc", tables_html)][1:24]
+rank_15 = tables_html[grep("<td class=\"dtr16 dtc", tables_html)][1:24]
+rank_16 = tables_html[grep("<td class=\"dtr17 dtc", tables_html)][1:24]
+rank_17 = tables_html[grep("<td class=\"dtr18 dtc", tables_html)][1:24]
+rank_18 = tables_html[grep("<td class=\"dtr19 dtc", tables_html)][1:24]
+rank_19 = tables_html[grep("<td class=\"dtr20 dtc", tables_html)][1:24]
+rank_20 = tables_html[grep("<td class=\"dtr21 dtc", tables_html)][1:24]
+
+#rank <- rep(NA, 20)
+#for (i in 1:20){
+#  rank[i] <- tables_html[grep(paste0("<td class=\"dtr", i+1, " dtc"), tables_html)][1:24]
+#}
+
+#rank_1 == rank[1]
+```
+
+```{r, echo=TRUE}
+data_processing_lead = function(x){
+  temp = vector()
+  for(i in 1:length(x)){
+    if(sum(nchar(x[i]))>28){ #if there are more than 28 chars, those lines are either team names or pts that we want
+      temp[i] = x[i]
+    }
+    temp = na.exclude(temp) # remove all NAs
+  }
+  pattern = "(.*)\">|</td>"
+  temp = gsub(pattern, "", temp) # remove useless strings
+  done = temp[1:length(temp)] # keep the information we want
+  return(done)
+}
+rank_1_clear = data_processing_lead(rank_1)
+rank_2_clear = data_processing_lead(rank_2)
+rank_3_clear = data_processing_lead(rank_3)
+rank_4_clear = data_processing_lead(rank_4)
+rank_5_clear = data_processing_lead(rank_5)
+rank_6_clear = data_processing_lead(rank_6)
+rank_7_clear = data_processing_lead(rank_7)
+rank_8_clear = data_processing_lead(rank_8)
+
+data_processing_lag = function(x){ # the only difference is the "if" statement because the lines start from rank 9 teams are longer, i.e. dtr10 and so on have 2 digits 
+  temp = vector()
+  for(i in 1:length(x)){
+    if(sum(nchar(x[i]))>29){ #if there are more than 29 chars, those lines are either team names or pts that we want
+      temp[i] = x[i]
+    }
+    temp = na.exclude(temp) # remove all NAs
+  }
+  pattern = "(.*)\">|</td>"
+  temp = gsub(pattern, "", temp) # remove useless strings
+  done = temp[1:length(temp)] # keep the information we want
+  return(done)
+}
+seasons_clear = data_processing_lag(seasons)
+rank_9_clear = data_processing_lag(rank_9)
+rank_10_clear = data_processing_lag(rank_10)
+rank_11_clear = data_processing_lag(rank_11)
+rank_12_clear = data_processing_lag(rank_12)
+rank_13_clear = data_processing_lag(rank_13)
+rank_14_clear = data_processing_lag(rank_14)
+rank_15_clear = data_processing_lag(rank_15)
+rank_16_clear = data_processing_lag(rank_16)
+rank_17_clear = data_processing_lag(rank_17)
+rank_18_clear = data_processing_lag(rank_18)
+rank_19_clear = data_processing_lag(rank_19)
+rank_20_clear = data_processing_lag(rank_20)
+
+# Remove the first element that represents the ranking starting from rank 10 teams
+rank_10_clear = rank_10_clear[-1]
+rank_11_clear = rank_11_clear[-1]
+rank_12_clear = rank_12_clear[-1]
+rank_13_clear = rank_13_clear[-1]
+rank_14_clear = rank_14_clear[-1]
+rank_15_clear = rank_15_clear[-1]
+rank_16_clear = rank_16_clear[-1]
+rank_17_clear = rank_17_clear[-1]
+rank_18_clear = rank_18_clear[-1]
+rank_19_clear = rank_19_clear[-1]
+rank_20_clear = rank_20_clear[-1]
+
+# Check all vectors are in correct length so that we could put them into a data frame
+all.equal(
+  length(seasons_clear),
+  length(rank_1_clear),
+  length(rank_2_clear),
+  length(rank_3_clear),
+  length(rank_4_clear),
+  length(rank_5_clear),
+  length(rank_6_clear),
+  length(rank_7_clear),
+  length(rank_8_clear),
+  length(rank_9_clear),
+  length(rank_10_clear),
+  length(rank_11_clear),
+  length(rank_12_clear),
+  length(rank_13_clear),
+  length(rank_14_clear),
+  length(rank_15_clear),
+  length(rank_16_clear),
+  length(rank_17_clear),
+  length(rank_18_clear),
+  length(rank_19_clear),
+  length(rank_20_clear))
+```
+
+
+```{r, echo=TRUE}
+# Combine all previous info together into a data frame
+tables = rbind(seasons_clear, 
+               rank_1_clear, 
+               rank_2_clear,
+               rank_3_clear,
+               rank_4_clear,
+               rank_5_clear,
+               rank_6_clear,
+               rank_7_clear,
+               rank_8_clear,
+               rank_9_clear,
+               rank_10_clear,
+               rank_11_clear,
+               rank_12_clear,
+               rank_13_clear,
+               rank_14_clear,
+               rank_15_clear,
+               rank_16_clear,
+               rank_17_clear,
+               rank_18_clear,
+               rank_19_clear,
+               rank_20_clear)
+
+colnames(tables) = c("2013-14", "Pts", "2014-15", "Pts", "2015-16", "Pts", "2016-17", "Pts", "2017-18", "Pts",
+                     "2018-19", "Pts", "2019-20", "Pts", "2020-21", "Pts")
+
+rownames(tables) = c("Season", 1:20)
+
+# Table for Seasons 2013-14 until 2020-21
+head(tables)
+```
+
+
+```{r, echo=TRUE}
+# Read the raw data for matches
+#result_2021_html = readLines("/Users/yechengcao/Desktop/535/Final/2020_21.html", warn = FALSE)
+#result_1920_html = readLines("/Users/yechengcao/Desktop/535/Final/2019_20.html", warn = FALSE)
+#result_1819_html = readLines("/Users/yechengcao/Desktop/535/Final/2018_19.html", warn = FALSE)
+#result_1718_html = readLines("/Users/yechengcao/Desktop/535/Final/2017_18.html", warn = FALSE)
+#result_1617_html = readLines("/Users/yechengcao/Desktop/535/Final/2016_17.html", warn = FALSE)
+
+result_2021_html = readLines("2020_21.html", warn = FALSE)
+result_1920_html = readLines("2019_20.html", warn = FALSE)
+result_1819_html = readLines("2018_19.html", warn = FALSE)
+result_1718_html = readLines("2017_18.html", warn = FALSE)
+result_1617_html = readLines("2016_17.html", warn = FALSE)
+```
+
+```{r, echo=TRUE}
+teams_processing = function(x){
+  temp = x[grep("                        <td>[A-Z]|                        <td>bet", x)]
+  pattern = "(.*)<td>|</td>"
+  temp_2 = gsub(pattern, "", temp) # remove useless strings
+  done = vector()
+  for(i in 1:length(temp_2)){
+    if((i %% 3)!=1){
+      done[i] = temp_2[i]
+    }
+  }
+  done = na.exclude(done) # remove all NAs
+  done = done[1:760]
+  return(done)
+}
+
+goals_processing = function(x){
+  temp = x[grep("                                                    <td>\\d+", x)]
+  pattern = "(.*)<td>|</td>"
+  temp_2 = gsub(pattern, "", temp) # remove useless strings
+  home = vector()
+  away = vector()
+  result = vector()
+  for(i in 1:length(temp_2)){
+    home[i] = substr(temp_2[i], 1, 1)
+    away[i] = substr(temp_2[i], 5, 5)
+    result[2*i-1] = home[i]
+    result[2*i] = away[i]
+  }
+  done = na.exclude(result) # remove all NAs
+  return(done)
+}
+
+```
+
+```{r, echo=TRUE}
+matches = cbind(teams_processing(result_1617_html), goals_processing(result_1617_html),
+                teams_processing(result_1718_html), goals_processing(result_1718_html),
+                teams_processing(result_1819_html), goals_processing(result_1819_html),
+                teams_processing(result_1920_html), goals_processing(result_1920_html),
+                teams_processing(result_2021_html), goals_processing(result_2021_html))
+
+#colnames(matches) = c("2016-17", "Goal(s)", "2017-18", "Goal(s)", "2018-19", "Goal(s)",
+#                      "2019-20", "Goal(s)", "2020-21", "Goal(s)")
+
+colnames(matches) = c("s1617", "g1617", "s1718", "g1718", "s1819", "g1819",
+                      "s1920", "g1920", "s2021", "g2021")
+rownames(matches) = rep(c("Home", "Away"), 380)
+
+
+# All match results for Seasons 2016-17 until 2020-21
+head(matches)
+```
+
+
+```{r}
+results_1617 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+for(i in 1:760){
+  if((i %% 2)!=0){
+    results_1617[(i%/%2)+1,1] = matches[i,1]
+    results_1617[(i%/%2)+1,3] = matches[i,2]
+  } else {
+    results_1617[i/2,2] = matches[i,1]
+    results_1617[i/2,4] = matches[i,2]
+    
+    if(results_1617[i/2,3]>results_1617[i/2,4]){
+      results_1617[i/2,5] = "H"
+    } else if(results_1617[i/2,3]<results_1617[i/2,4]){
+      results_1617[i/2,5] = "A"
+    } else{
+      results_1617[i/2,5] = "D"
+    }
+  }
+}
+colnames(results_1617) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+
+results_1718 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+for(i in 1:760){
+  if((i %% 2)!=0){
+    results_1718[(i%/%2)+1,1] = matches[i,3]
+    results_1718[(i%/%2)+1,3] = matches[i,4]
+  } else {
+    results_1718[i/2,2] = matches[i,3]
+    results_1718[i/2,4] = matches[i,4]
+    
+    if(results_1718[i/2,3]>results_1718[i/2,4]){
+      results_1718[i/2,5] = "H"
+    } else if(results_1718[i/2,3]<results_1718[i/2,4]){
+      results_1718[i/2,5] = "A"
+    } else{
+      results_1718[i/2,5] = "D"
+    }
+  }
+}
+colnames(results_1718) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+
+results_1819 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+for(i in 1:760){
+  if((i %% 2)!=0){
+    results_1819[(i%/%2)+1,1] = matches[i,5]
+    results_1819[(i%/%2)+1,3] = matches[i,6]
+  } else {
+    results_1819[i/2,2] = matches[i,5]
+    results_1819[i/2,4] = matches[i,6]
+    
+    if(results_1819[i/2,3]>results_1819[i/2,4]){
+      results_1819[i/2,5] = "H"
+    } else if(results_1819[i/2,3]<results_1819[i/2,4]){
+      results_1819[i/2,5] = "A"
+    } else{
+      results_1819[i/2,5] = "D"
+    }
+  }
+}
+colnames(results_1819) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+
+results_1920 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+for(i in 1:760){
+  if((i %% 2)!=0){
+    results_1920[(i%/%2)+1,1] = matches[i,7]
+    results_1920[(i%/%2)+1,3] = matches[i,8]
+  } else {
+    results_1920[i/2,2] = matches[i,7]
+    results_1920[i/2,4] = matches[i,8]
+    
+    if(results_1920[i/2,3]>results_1920[i/2,4]){
+      results_1920[i/2,5] = "H"
+    } else if(results_1920[i/2,3]<results_1920[i/2,4]){
+      results_1920[i/2,5] = "A"
+    } else{
+      results_1920[i/2,5] = "D"
+    }
+  }
+}
+colnames(results_1920) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+
+results_2021 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+for(i in 1:760){
+  if((i %% 2)!=0){
+    results_2021[(i%/%2)+1,1] = matches[i,9]
+    results_2021[(i%/%2)+1,3] = matches[i,10]
+  } else {
+    results_2021[i/2,2] = matches[i,9]
+    results_2021[i/2,4] = matches[i,10]
+    
+    if(results_2021[i/2,3]>results_2021[i/2,4]){
+      results_2021[i/2,5] = "H"
+    } else if(results_2021[i/2,3]<results_2021[i/2,4]){
+      results_2021[i/2,5] = "A"
+    } else{
+      results_2021[i/2,5] = "D"
+    }
+  }
+}
+colnames(results_2021) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+```
+
+
+```{r}
+# Temporarily use csv data
+# test_data <- rbind(read_csv("season-1617_csv.csv")[2:7], read_csv("season-1718_csv.csv")[2:7], read_csv("season-1819_csv.csv")[2:7])
+test_data = rbind(results_1617, results_1718, results_1819, results_1920, results_2021)
+```
+
+# Prediction {-}
+
+## Fits Poisson Distribution ############################# 
+
+**Data Summary**
+```{r}
+# Summarize home power
+HomePower <- test_data %>% 
+  group_by(HomeTeam) %>% 
+  summarize(HWins = sum(FTR == "H"), HDraws = sum(FTR == "D"), HLoses = 19*3 - HWins - HDraws,
+            HP = 3 * HWins + 1 * HDraws, HPower = HP / (19*3*3))
+
+# Summarize away power
+AwayPower <- test_data %>% 
+  group_by(AwayTeam) %>% 
+  summarize(AWins = sum(FTR == "A"), ADraws = sum(FTR == "D"), ALoses = 19*3 - AWins - ADraws,
+            AP = 3 * AWins + 1 * ADraws, APower = AP / (19*3*3)) 
+
+# Distribution of number of home goals for each team
+HG <- test_data %>% 
+  group_by(HomeTeam, FTHG) %>%
+  summarize(HG = n()) %>%
+  spread(FTHG, HG) 
+
+# Distribution of number of away goals for each team
+AG <- test_data %>% 
+  group_by(AwayTeam, FTAG) %>%
+  summarize(AG = n()) %>% 
+  spread(FTAG, AG)
+
+
+```
+
+**Analysis and Parameter Estimation**
+```{r}
+# First plot the distributions in home and away goals in the same histogram.
+(hist_comparison <- ggplot () +
+  geom_bar(aes(test_data$FTHG), col = "red", fill = rgb(1, 0, 0, 0.2)) +
+  geom_bar(aes(test_data$FTAG), col = "green", fill = rgb(0, 1, 0, 0.2)))
+
+# Intuitively it makes sense that when playing away matches, on a general level, teams tend to apply a more defensive strategy thus scoring less goals. 
+
+# The fit test of poisson returns a favorable result for both home and away goals
+gftest_H <- goodfit(test_data$FTHG, type = "poisson", method = "ML")
+summary(gftest_H)
+
+gftest_A <- goodfit(test_data$FTAG, type = "poisson", method = "ML")
+summary(gftest_A)
+
+# Plot the theoretical poisson distribution and actual home goals
+# (hist_h <- ggplot () +
+# geom_bar(aes(rpois(1000, gftest_H$par[[1]])), col="black", fill = "gray") +
+# geom_bar(aes(test_data$FTHG), col = "red", fill = rgb(1, 0, 0, 0.2)) +
+# scale_x_continuous(limits=c(0, 8)) +
+# scale_y_continuous(limits=c(0, 15)))
+# 
+# # Plot the theoretical poisson distribution and actual away goals
+# (hist_a <- ggplot () +
+# geom_bar(aes(rpois(1000, gftest_A$par[[1]])), col="black", fill = "gray") +
+# geom_bar(aes(test_data$FTAG), col = "green", fill = rgb(0, 1, 0, 0.2)))
+# # It could be observed that the actual distributions fit with poisson distribution fairly well.
+
+# But not the overall sample is not representative for every team, as strong teams like Man City will still dominate in away matches and score at least two goals most of the times.
+test_data %>% 
+  group_by(AwayTeam, FTAG) %>%
+  filter(AwayTeam ==  "Man City") %>% 
+  summarize(FTAG) %>% 
+  ggplot() +
+  geom_bar(mapping = aes(FTAG))
+# Therefore we decided to estimate the distribution parameter for each team
+
+# Summarize goal number for each team in both Home and away matches
+HM <- test_data %>% 
+  group_by(HomeTeam) %>% 
+  summarize(FTHG) %>% 
+  pivot_wider(names_from = HomeTeam, values_from = FTHG)
+
+AM <- test_data %>% 
+  group_by(AwayTeam) %>% 
+  summarize(FTAG) %>% 
+  pivot_wider(names_from = AwayTeam, values_from = FTAG)
+
+# Vectorize the fit test function and return parameters for each team for both home and away matches
+gftest_vec <- Vectorize(goodfit, "x")
+Home_test <- data.frame(t(gftest_vec(HM, "poisson", "ML")))
+Away_test <- data.frame(t(gftest_vec(AM, "poisson", "ML")))
+pois_par <- data.frame(cbind(unlist(Home_test$par), unlist(Away_test$par)))
+colnames(pois_par) = c("Home", "Away")
+  
+Names <- test_data %>% 
+  arrange(HomeTeam) %>%
+  select(Team = HomeTeam) %>% 
+  unique()  
+
+# pois_par shows all teams poison parameters appeared in last 5 seasons
+pois_par <- cbind(Names, pois_par)
+
+# Newly promoted team Brentford (from English Football League Championship) never appeared in Premier League in last 5 seasons
+# We use the mean of Sheffield United and West Bromwich to replace Brentford, where Sheffield and West Bromwich are relegated in last season 
+brentford = data.frame(Team = "Brentford",
+           Home = (pois_par[21, ]$Home + pois_par[28, ]$Home)/2,
+           Away = (pois_par[21, ]$Away + pois_par[28, ]$Away)/2)
+
+pois_par_2122 = rbind(pois_par[1, ], pois_par[2, ], brentford, pois_par[4, ], pois_par[5, ], pois_par[7, ],
+                  pois_par[8, ], pois_par[9, ], pois_par[13, ], pois_par[14, ], pois_par[15, ],
+                  pois_par[16, ], pois_par[17, ], pois_par[19, ], pois_par[20, ], pois_par[22, ],
+                  pois_par[23, ], pois_par[27, ], pois_par[29, ], pois_par[30, ])
+
+pois_par_2122
+```
+
+**Monte Carlo Simulation**
+```{r}
+# Define a function for single-time simulation, with home/away lambda parameters of each team as inputs
+sim1 <- function(lambda_data){
+  results_h <- data.frame(matrix(NA, nrow = 20, ncol = 20))
+  results_a <- data.frame(matrix(NA, nrow = 20, ncol = 20))
+  rownames(results_h) = lambda_data[1:20, 1]
+  colnames(results_h) = lambda_data[1:20, 1]
+  rownames(results_a) = lambda_data[1:20, 1]
+  colnames(results_a) = lambda_data[1:20, 1]
+  
+  for (i in 1:20){
+    for (j in 1:20){
+      if (i == j){
+        results_h[i, j] = 0
+      } else {
+        if (lambda_data[i, 2] > 1.5*lambda_data[j, 3]){ # when big teams against small teams
+          lambda_data[i, 2] = 2*lambda_data[i, 2] # adjust both teams' lambda
+          lambda_data[j, 3] = 0.5*lambda_data[j, 3]
+          if(round(rpois(1, lambda_data[i, 2])) > round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 3}
+          else if(round(rpois(1, lambda_data[i, 2])) < round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 0}
+          else {results_h[i, j] = 1}
+          lambda_data[i, 2] = lambda_data[i, 2]/2
+          lambda_data[j, 3] = 2*lambda_data[j, 3]
+        } else { # when teams are similar
+          if(round(rpois(1, lambda_data[i, 2])) > round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 3}
+          else if(round(rpois(1, lambda_data[i, 2])) < round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 0}
+          else {results_h[i, j] = 1}
+        }
+      }
+    }
+  }
+
+  for (i in 1:20){
+    for (j in 1:20){
+      if (i == j){
+        results_a[i, j] = 0
+      }
+      else if (results_h[j, i] == 3){
+        results_a[i, j] = 0
+      }
+      else if (results_h[j ,i] == 1){
+        results_a[i, j] = 1
+      }
+      else{
+        results_a[i, j] = 3
+      }
+    }
+  }
+  
+  results_sum_h <- results_h %>% 
+    rowSums()
+  results_sum_a <- results_a %>% 
+    rowSums()
+  Table <- data.frame(results_sum_h + results_sum_a)
+  colnames(Table) <- "Points"
+  return(Table)
+}
+
+# Check out the single simulation result
+single_sim <- sim1(pois_par_2122)
+single_sim
+
+# Define Monte Carlo Simulation function
+MCS <- function(n = 1000, lambda_data){
+  set.seed(697)
+  mc <- data.frame(matrix(NA, nrow = 20, ncol = n))
+  rownames(mc) = lambda_data[1:20, 1]
+  for (i in 1:n){
+    mc[1:20, i] <- sim1(lambda_data)
+  }
+  
+  results <- mc %>% 
+    rowSums() %>% 
+    as.data.frame()
+
+  colnames(results) <- "Points"
+
+  results_mc <- results %>%  
+    mutate(Rank = dense_rank(desc(Points))) %>% 
+    mutate(Points = round(Points/n, 0)) %>% 
+    arrange(Rank)
+
+  return(results_mc)
+}
+
+test <- MCS(100, pois_par_2122)
+
+test
+
+# The output makes a lot more sense now, and I believe the next step for us is to figure out the newly promoted team Brentford (never appeared in last 5 seasons in Premier League) in 2021/22 season. There are 30 teams appeared in the last 5 seasons and covered all remaining 19 teams for this season. 
+# Please feel free to make visualizations...
+```
+
+
+
+
