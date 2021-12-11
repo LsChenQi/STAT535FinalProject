@@ -1,3 +1,7 @@
+# load library/package
+library(ggplot2)
+library(reshape2)
+library(scales)
 # set the working directory to use relative path
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
@@ -154,5 +158,86 @@ data_processing = function(x, n){
   
   # All match results for Seasons 2016-17 until 2020-21
   head(matches)
-
   
+  # plot the rankings of each team in the last seasons
+  allSeasons =  c("2013-14", "2014-15", "2015-16", "2016-17", "2017-18", 
+               "2018-19", "2019-20",  "2020-21")
+  nSeasons = 8 # how many seasons do you want to see?
+  #------------------------------------------------------------------------------------
+  # This function is used to find the teams appeared in ranking list in the all seasons
+  find_same = function(x){
+    n = ncol(x) - 1
+    temp = x[,1]
+    for (i in 1:n) {
+      temp = temp[is.element(temp, x[, i+1])]
+    }
+    return(temp)
+  }
+  table_team = tables[-1, ]
+  table_team = tables[, seq(ncol(table_team) - (nSeasons - 1) * 2 - 1, ncol(table_team), by = 2)]
+  promising_team = find_same(table_team)
+  # Find the rank and points of each promising team in these seasons
+  table_team = tables[-1, ]
+  table_team = tables[, seq(ncol(table_team) - (nSeasons - 1) * 2 - 1, ncol(table_team))]
+  get_rank_and_point = function(x){
+    ranks = matrix(nrow = length(x), ncol = nSeasons)
+    points = matrix(nrow = length(x), ncol = nSeasons)
+    for (i in 1:length(x)) {
+      for (j in 1:nSeasons) {
+        ranks[i, j] = which(table_team[, 2*j - 1] == x[i])
+        points[i, j] = strtoi(table_team[ranks[i, j], 2*j])
+      }
+    }
+    result = list(ranks, points)
+    return(result)
+  }
+  
+  result =  get_rank_and_point(promising_team)
+  rank_of_proming_team = result[[1]]
+  point_of_proming_team = result[[2]]
+    
+  list[rank_of_proming_team, point_of_proming_team] = get_rank_and_point(promising_team)
+  # used to verify the data
+  rownames(rank_of_proming_team) = c(promising_team)
+  colnames(rank_of_proming_team) = tail(allSeasons, nSeasons)
+  rownames(point_of_proming_team) = c(promising_team)
+  colnames(point_of_proming_team) = tail(allSeasons, nSeasons)
+  
+  # create data frame for plot
+  seasonsPlot = c(2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020)
+  rank_of_proming_team_df = data.frame(
+                            Seasons = tail(seasonsPlot, nSeasons)
+                            )
+  for (i in 1:length(promising_team)) {
+    rank_of_proming_team_df[, promising_team[i]] = rank_of_proming_team[i,]
+  }
+  
+  rank_of_proming_team_df = melt(rank_of_proming_team_df ,  id.vars = 'Seasons', variable.name = 'Teams')
+  
+  point_of_proming_team_df = data.frame(
+    Seasons = tail(seasonsPlot, nSeasons)
+  )
+  for (i in 1:length(promising_team)) {
+    point_of_proming_team_df[, promising_team[i]] = point_of_proming_team[i,]
+  }
+  
+  point_of_proming_team_df = melt(point_of_proming_team_df ,  id.vars = 'Seasons', variable.name = 'Teams')
+  
+  # plot the change of rank 
+  (plt =  ggplot(rank_of_proming_team_df, aes(Seasons,value)) + 
+          geom_line(aes(colour = Teams)) + 
+          scale_y_continuous(breaks= pretty_breaks(), trans = "reverse") +
+          scale_x_continuous(breaks = tail(seasonsPlot, nSeasons), label = tail(allSeasons, nSeasons)) + 
+          ylab("Rank") +
+          ggtitle("Every team's rank") +
+          theme(plot.title = element_text(hjust = 0.5))
+  )
+  # plot the change of points 
+  (plt =  ggplot(point_of_proming_team_df, aes(Seasons,value)) + 
+      geom_line(aes(colour = Teams)) + 
+      scale_y_continuous(breaks= pretty_breaks()) +
+      scale_x_continuous(breaks = tail(seasonsPlot, nSeasons), label = tail(allSeasons, nSeasons)) + 
+      ylab("Rank") +
+      ggtitle("Every team's points") +
+      theme(plot.title = element_text(hjust = 0.5))
+  )
