@@ -159,11 +159,13 @@ data_processing = function(x, n){
   # All match results for Seasons 2016-17 until 2020-21
   head(matches)
   
+  
+  #begin of plots for data mining----------------------------------------------
   # plot the rankings of each team in the last seasons
   allSeasons =  c("2013-14", "2014-15", "2015-16", "2016-17", "2017-18", 
                "2018-19", "2019-20",  "2020-21")
   nSeasons = 8 # how many seasons do you want to see?
-  #------------------------------------------------------------------------------------
+  
   # This function is used to find the teams appeared in ranking list in the all seasons
   find_same = function(x){
     n = ncol(x) - 1
@@ -241,3 +243,179 @@ data_processing = function(x, n){
       ggtitle("Every team's points") +
       theme(plot.title = element_text(hjust = 0.5))
   )
+  
+  # plot the error bar of rank 
+  #some teams' names are too long
+  promising_team_names = lapply(promising_team, FUN = function(x){
+    if (x == "MANCHESTER CITY"){
+      return("MAN CITY")
+    }
+    if(x == "MANCHESTER UNITED"){
+      return("MAN UNITED")
+    }
+    substr(x, 1,3)
+  })
+  rank_error_bar_df = data.frame(
+    Teams = unlist(promising_team_names),
+    RankMean = rowMeans(rank_of_proming_team),
+    RankSD = apply(rank_of_proming_team, 1, sd, na.rm = TRUE)
+  )
+  
+ (plt = ggplot(rank_error_bar_df, aes(x = Teams, y = RankMean, ymin = RankMean-RankSD, ymax =RankMean+RankSD)) +
+        geom_pointrange() +
+        geom_errorbar(width = 0.2) +
+        geom_point(size = 1.5) +
+        scale_y_continuous(breaks= 1:20, trans = "reverse") +
+        ylab("Rank")
+  )
+  
+  
+  # plot the error bar of point 
+  point_error_bar_df = data.frame(
+    Teams = unlist(promising_team_names),
+    PointMean = rowMeans(point_of_proming_team),
+    PointSD = apply(point_of_proming_team, 1, sd, na.rm = TRUE)
+  )
+  
+  (plt = ggplot(point_error_bar_df, aes(x = Teams, y = PointMean, ymin = PointMean-PointSD, ymax =PointMean+PointSD)) +
+      geom_pointrange() +
+      geom_errorbar(width = 0.2) +
+      geom_point(size = 1.5) +
+      scale_y_continuous(breaks= pretty_breaks()) +
+      ylab("Point")
+  )
+  # end of plots for data mining--------------------------------------------------------------------
+  
+  # FTHG = Full Time Home Team Goals
+  # FTAG = Full Time Away Team Goals
+  # FTR = Full Time Result
+  results_1617 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+  for(i in 1:760){
+    if((i %% 2)!=0){
+      results_1617[(i%/%2)+1,1] = matches[i,1]
+      results_1617[(i%/%2)+1,3] = matches[i,2]
+    } else {
+      results_1617[i/2,2] = matches[i,1]
+      results_1617[i/2,4] = matches[i,2]
+      
+      if(results_1617[i/2,3]>results_1617[i/2,4]){
+        results_1617[i/2,5] = "H"
+      } else if(results_1617[i/2,3]<results_1617[i/2,4]){
+        results_1617[i/2,5] = "A"
+      } else{
+        results_1617[i/2,5] = "D"
+      }
+    }
+  }
+  colnames(results_1617) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+  
+  results_1718 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+  for(i in 1:760){
+    if((i %% 2)!=0){
+      results_1718[(i%/%2)+1,1] = matches[i,3]
+      results_1718[(i%/%2)+1,3] = matches[i,4]
+    } else {
+      results_1718[i/2,2] = matches[i,3]
+      results_1718[i/2,4] = matches[i,4]
+      
+      if(results_1718[i/2,3]>results_1718[i/2,4]){
+        results_1718[i/2,5] = "H"
+      } else if(results_1718[i/2,3]<results_1718[i/2,4]){
+        results_1718[i/2,5] = "A"
+      } else{
+        results_1718[i/2,5] = "D"
+      }
+    }
+  }
+  colnames(results_1718) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+  
+  results_1819 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+  for(i in 1:760){
+    if((i %% 2)!=0){
+      results_1819[(i%/%2)+1,1] = matches[i,5]
+      results_1819[(i%/%2)+1,3] = matches[i,6]
+    } else {
+      results_1819[i/2,2] = matches[i,5]
+      results_1819[i/2,4] = matches[i,6]
+      
+      if(results_1819[i/2,3]>results_1819[i/2,4]){
+        results_1819[i/2,5] = "H"
+      } else if(results_1819[i/2,3]<results_1819[i/2,4]){
+        results_1819[i/2,5] = "A"
+      } else{
+        results_1819[i/2,5] = "D"
+      }
+    }
+  }
+  colnames(results_1819) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+  
+  results_1920 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+  for(i in 1:760){
+    if((i %% 2)!=0){
+      results_1920[(i%/%2)+1,1] = matches[i,7]
+      results_1920[(i%/%2)+1,3] = matches[i,8]
+    } else {
+      results_1920[i/2,2] = matches[i,7]
+      results_1920[i/2,4] = matches[i,8]
+      
+      if(results_1920[i/2,3]>results_1920[i/2,4]){
+        results_1920[i/2,5] = "H"
+      } else if(results_1920[i/2,3]<results_1920[i/2,4]){
+        results_1920[i/2,5] = "A"
+      } else{
+        results_1920[i/2,5] = "D"
+      }
+    }
+  }
+  colnames(results_1920) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+  
+  results_2021 <- data.frame(matrix(NA, nrow = 380, ncol = 5))
+  for(i in 1:760){
+    if((i %% 2)!=0){
+      results_2021[(i%/%2)+1,1] = matches[i,9]
+      results_2021[(i%/%2)+1,3] = matches[i,10]
+    } else {
+      results_2021[i/2,2] = matches[i,9]
+      results_2021[i/2,4] = matches[i,10]
+      
+      if(results_2021[i/2,3]>results_2021[i/2,4]){
+        results_2021[i/2,5] = "H"
+      } else if(results_2021[i/2,3]<results_2021[i/2,4]){
+        results_2021[i/2,5] = "A"
+      } else{
+        results_2021[i/2,5] = "D"
+      }
+    }
+  }
+  colnames(results_2021) = c("HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR")
+  
+  test_data = rbind(results_1617, results_1718, results_1819, results_1920, results_2021)
+  
+  # Prediction {-}
+  
+  ## Fits Poisson Distribution ############################# 
+  ## **Data Summary**
+  # Summarize home power
+  HomePower <- test_data %>% 
+    group_by(HomeTeam) %>% 
+    summarize(HWins = sum(FTR == "H"), HDraws = sum(FTR == "D"), HLoses = 19*3 - HWins - HDraws,
+              HP = 3 * HWins + 1 * HDraws, HPower = HP / (19*3*3))
+  
+  # Summarize away power
+  AwayPower <- test_data %>% 
+    group_by(AwayTeam) %>% 
+    summarize(AWins = sum(FTR == "A"), ADraws = sum(FTR == "D"), ALoses = 19*3 - AWins - ADraws,
+              AP = 3 * AWins + 1 * ADraws, APower = AP / (19*3*3)) 
+  
+  # Distribution of number of home goals for each team
+  HG <- test_data %>% 
+    group_by(HomeTeam, FTHG) %>%
+    summarize(HG = n()) %>%
+    spread(FTHG, HG) 
+  
+  # Distribution of number of away goals for each team
+  AG <- test_data %>% 
+    group_by(AwayTeam, FTAG) %>%
+    summarize(AG = n()) %>% 
+    spread(FTAG, AG)
+  
