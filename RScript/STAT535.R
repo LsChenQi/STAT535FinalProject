@@ -717,7 +717,7 @@ data_processing = function(x, n){
       scale_y_continuous(breaks= pretty_breaks(), trans = "reverse") +
       scale_x_continuous(breaks = finalSeasonsPlot, label = finalSeasons) + 
       ylab("Rank") +
-      ggtitle("Rank Predictation") +
+      ggtitle("Rank Prediction") +
       theme(plot.title = element_text(hjust = 0.5))
   )
   
@@ -726,7 +726,7 @@ data_processing = function(x, n){
       scale_y_continuous(breaks= pretty_breaks()) +
       scale_x_continuous(breaks = finalSeasonsPlot, label = finalSeasons) + 
       ylab("Point") +
-      ggtitle("Point Predictation") +
+      ggtitle("Point Prediction") +
       theme(plot.title = element_text(hjust = 0.5))
   )
   
