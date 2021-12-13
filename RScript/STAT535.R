@@ -726,7 +726,7 @@ data_processing = function(x, n){
       scale_y_continuous(breaks= pretty_breaks()) +
       scale_x_continuous(breaks = finalSeasonsPlot, label = finalSeasons) + 
       ylab("Point") +
-      ggtitle("Pint Predictation") +
+      ggtitle("Point Predictation") +
       theme(plot.title = element_text(hjust = 0.5))
   )
   
