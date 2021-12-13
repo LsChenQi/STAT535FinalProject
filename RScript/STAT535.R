@@ -2,6 +2,10 @@
 library(ggplot2)
 library(reshape2)
 library(scales)
+library(dplyr)
+library(tidyr)
+library(vcd)
+library(grid)
 # set the working directory to use relative path
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
@@ -186,8 +190,15 @@ data_processing = function(x, n){
     points = matrix(nrow = length(x), ncol = nSeasons)
     for (i in 1:length(x)) {
       for (j in 1:nSeasons) {
-        ranks[i, j] = which(table_team[, 2*j - 1] == x[i])
-        points[i, j] = strtoi(table_team[ranks[i, j], 2*j])
+        if (is.element( x[i], table_team[, 2*j - 1])){
+          ranks[i, j] = which(table_team[, 2*j - 1] == x[i])
+          points[i, j] = strtoi(table_team[ranks[i, j], 2*j])
+        }
+        else{
+          ranks[i, j] = NA
+          points[i, j] = NA
+        }
+        
       }
     }
     result = list(ranks, points)
@@ -197,8 +208,6 @@ data_processing = function(x, n){
   result =  get_rank_and_point(promising_team)
   rank_of_proming_team = result[[1]]
   point_of_proming_team = result[[2]]
-    
-  list[rank_of_proming_team, point_of_proming_team] = get_rank_and_point(promising_team)
   # used to verify the data
   rownames(rank_of_proming_team) = c(promising_team)
   colnames(rank_of_proming_team) = tail(allSeasons, nSeasons)
@@ -398,13 +407,13 @@ data_processing = function(x, n){
   # Summarize home power
   HomePower <- test_data %>% 
     group_by(HomeTeam) %>% 
-    summarize(HWins = sum(FTR == "H"), HDraws = sum(FTR == "D"), HLoses = 19*3 - HWins - HDraws,
+    summarize(HWins = sum(FTR == "H"), HDraws = sum(FTR == "D"), HLoses = sum(FTR == "A"),
               HP = 3 * HWins + 1 * HDraws, HPower = HP / (19*3*3))
   
   # Summarize away power
   AwayPower <- test_data %>% 
     group_by(AwayTeam) %>% 
-    summarize(AWins = sum(FTR == "A"), ADraws = sum(FTR == "D"), ALoses = 19*3 - AWins - ADraws,
+    summarize(AWins = sum(FTR == "A"), ADraws = sum(FTR == "D"), ALoses = sum(FTR == "A"),
               AP = 3 * AWins + 1 * ADraws, APower = AP / (19*3*3)) 
   
   # Distribution of number of home goals for each team
@@ -418,4 +427,306 @@ data_processing = function(x, n){
     group_by(AwayTeam, FTAG) %>%
     summarize(AG = n()) %>% 
     spread(FTAG, AG)
+  
+  # begin plot of match information
+  #---------------------------------------------------
+  #some teams' names are too long
+  team_names_plot = lapply(HomePower$HomeTeam, FUN = function(x){
+    if (x == "Leeds"){
+      return("LE")
+    }
+    if(x == "Leicester"){
+      return("LC")
+    }
+    if (x == "Man City"){
+      return("MC")
+    }
+    if(x == "Man Utd"){
+      return("MU")
+    }
+    if(x == "West Brom"){
+      return("WB")
+    }
+    if(x == "West Ham"){
+      return("WH")
+    }
+    substr(x, 1, 2)
+  })
+  team_names_plot = unlist(team_names_plot)
+  number_of_games = numeric(3 * length(team_names_plot))
+  number_of_games[seq(1, length(number_of_games), 3)] = HomePower$HWins
+  number_of_games[seq(2, length(number_of_games), 3)] = HomePower$HDraws
+  number_of_games[seq(3, length(number_of_games), 3)] = HomePower$HLoses
+  home_match_result = data.frame(
+                       Teams=rep(team_names_plot, each=3),
+                       Result=rep(c("Win", "Draw", "Lose"), length(team_names_plot)),
+                       Number=number_of_games)
+  
+  (ggplot(data=home_match_result, aes(x=Teams, y=Number, fill=Result)) +
+         geom_bar(stat="identity") +
+         ylab("Number of matches") +
+         ggtitle("Home team performance") +
+         theme(plot.title = element_text(hjust = 0.5)))
+  
+  team_names_away_plot = lapply(AwayPower$AwayTeam, FUN = function(x){
+    if (x == "Leeds"){
+      return("LE")
+    }
+    if(x == "Leicester"){
+      return("LC")
+    }
+    if (x == "Man City"){
+      return("MC")
+    }
+    if(x == "Man Utd"){
+      return("MU")
+    }
+    if(x == "West Brom"){
+      return("WB")
+    }
+    if(x == "West Ham"){
+      return("WH")
+    }
+    substr(x, 1, 2)
+  })
+  team_names_away_plot = unlist(team_names_away_plot)
+  number_of_games_away = numeric(3 * length(team_names_away_plot))
+  number_of_games_away[seq(1, length(number_of_games_away), 3)] = AwayPower$AWins
+  number_of_games_away[seq(2, length(number_of_games_away), 3)] = AwayPower$ADraws
+  number_of_games_away[seq(3, length(number_of_games_away), 3)] = AwayPower$ALoses
+  away_match_result = data.frame(
+    Teams=rep(team_names_away_plot, each=3),
+    Result=rep(c("Win", "Draw", "Lose"), length(team_names_away_plot)),
+    Number=number_of_games_away)
+  
+  (ggplot(data=away_match_result, aes(x=Teams, y=Number, fill=Result)) +
+      geom_bar(stat="identity") +
+      ylab("Number of matches") +
+      ggtitle("Away team performance") +
+      theme(plot.title = element_text(hjust = 0.5)))
+  
+  
+  #-----end of plot------------------------------------
+  
+  
+  # But not the overall sample is not representative for every team, as strong teams like Man City will still dominate in away matches and score at least two goals most of the times.
+  test_data %>% 
+    group_by(AwayTeam, FTAG) %>%
+    filter(AwayTeam ==  "Man City") %>% 
+    summarize(FTAG) %>% 
+    ggplot() +
+    geom_bar(mapping = aes(FTAG))
+  # Therefore we decided to estimate the distribution parameter for each team
+  
+  # Summarize goal number for each team in both Home and away matches
+  HM <- test_data %>% 
+    group_by(HomeTeam) %>% 
+    summarize(FTHG) %>% 
+    pivot_wider(names_from = HomeTeam, values_from = FTHG)
+  
+  AM <- test_data %>% 
+    group_by(AwayTeam) %>% 
+    summarize(FTAG) %>% 
+    pivot_wider(names_from = AwayTeam, values_from = FTAG)
+  
+  # Vectorize the fit test function and return parameters for each team for both home and away matches
+  gftest_vec <- Vectorize(goodfit, "x")
+  Home_test <- data.frame(t(gftest_vec(HM, "poisson", "ML")))
+  Away_test <- data.frame(t(gftest_vec(AM, "poisson", "ML")))
+  pois_par <- data.frame(cbind(unlist(Home_test$par), unlist(Away_test$par)))
+  colnames(pois_par) = c("Home", "Away")
+  
+  Names <- test_data %>% 
+    arrange(HomeTeam) %>%
+    select(Team = HomeTeam) %>% 
+    unique()  
+  
+  # pois_par shows all teams poison parameters appeared in last 5 seasons
+  pois_par <- cbind(Names, pois_par)
+  
+  # Newly promoted team Brentford (from English Football League Championship) never appeared in Premier League in last 5 seasons
+  # We use the mean of Sheffield United and West Bromwich to replace Brentford, where Sheffield and West Bromwich are relegated in last season 
+  brentford = data.frame(Team = "Brentford",
+                         Home = (pois_par[21, ]$Home + pois_par[28, ]$Home)/2,
+                         Away = (pois_par[21, ]$Away + pois_par[28, ]$Away)/2)
+  
+  pois_par_2122 = rbind(pois_par[1, ], pois_par[2, ], brentford, pois_par[4, ], pois_par[5, ], pois_par[7, ],
+                        pois_par[8, ], pois_par[9, ], pois_par[13, ], pois_par[14, ], pois_par[15, ],
+                        pois_par[16, ], pois_par[17, ], pois_par[19, ], pois_par[20, ], pois_par[22, ],
+                        pois_par[23, ], pois_par[27, ], pois_par[29, ], pois_par[30, ])
+  
+  
+  # **Monte Carlo Simulation**
+  
+  # Define a function for single-time simulation, with home/away lambda parameters of each team as inputs
+  sim1 <- function(lambda_data){
+    results_h <- data.frame(matrix(NA, nrow = 20, ncol = 20))
+    results_a <- data.frame(matrix(NA, nrow = 20, ncol = 20))
+    rownames(results_h) = lambda_data[1:20, 1]
+    colnames(results_h) = lambda_data[1:20, 1]
+    rownames(results_a) = lambda_data[1:20, 1]
+    colnames(results_a) = lambda_data[1:20, 1]
+    
+    for (i in 1:20){
+      for (j in 1:20){
+        if (i == j){
+          results_h[i, j] = 0
+        } else {
+          if (lambda_data[i, 2] > 1.5*lambda_data[j, 3]){ # when big teams against small teams
+            lambda_data[i, 2] = 2*lambda_data[i, 2] # adjust both teams' lambda
+            lambda_data[j, 3] = 0.5*lambda_data[j, 3]
+            if(round(rpois(1, lambda_data[i, 2])) > round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 3}
+            else if(round(rpois(1, lambda_data[i, 2])) < round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 0}
+            else {results_h[i, j] = 1}
+            lambda_data[i, 2] = lambda_data[i, 2]/2
+            lambda_data[j, 3] = 2*lambda_data[j, 3]
+          } else { # when teams are similar
+            if(round(rpois(1, lambda_data[i, 2])) > round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 3}
+            else if(round(rpois(1, lambda_data[i, 2])) < round(rpois(1, lambda_data[j, 3]))){results_h[i, j] = 0}
+            else {results_h[i, j] = 1}
+          }
+        }
+      }
+    }
+    
+    for (i in 1:20){
+      for (j in 1:20){
+        if (i == j){
+          results_a[i, j] = 0
+        }
+        else if (results_h[j, i] == 3){
+          results_a[i, j] = 0
+        }
+        else if (results_h[j ,i] == 1){
+          results_a[i, j] = 1
+        }
+        else{
+          results_a[i, j] = 3
+        }
+      }
+    }
+    
+    results_sum_h <- results_h %>% 
+      rowSums()
+    results_sum_a <- results_a %>% 
+      rowSums()
+    Table <- data.frame(results_sum_h + results_sum_a)
+    colnames(Table) <- "Points"
+    return(Table)
+  }
+  
+  # Check out the single simulation result
+  single_sim <- sim1(pois_par_2122)
+  single_sim
+  
+  # Define Monte Carlo Simulation function
+  MCS <- function(n = 1000, lambda_data){
+    set.seed(697)
+    mc <- data.frame(matrix(NA, nrow = 20, ncol = n))
+    rownames(mc) = lambda_data[1:20, 1]
+    for (i in 1:n){
+      mc[1:20, i] <- sim1(lambda_data)
+    }
+    
+    #------plot histogram for Monte Carlo Simulation Results
+    ManCitySimulation = unname(unlist(mc[12,]))
+    (plt = ggplot(data.frame(x = ManCitySimulation)) +
+        geom_histogram(aes(x = x, y =..density..), color = "white", fill="red"))
+    alpha = 0.05
+    ManCity_point_CI_95 = quantile(ManCitySimulation, c(alpha/2, 1-alpha/2))
+    ManCity_point_CI_90 = quantile(ManCitySimulation, c(alpha, 1-alpha))
+    plt + geom_vline(xintercept = ManCity_point_CI_90, col = "green", linetype = "dashed") +
+          geom_vline(xintercept = ManCity_point_CI_95, col = "blue", linetype = "dashed") +  
+          xlab('Man City Predicted Points For 21-22 Season (n = 1000)') +
+          geom_text(aes(x=80, label=" 90% confidence interval", y=0.07), colour="green", size = 4)+
+          geom_text(aes(x=80, label=" 95% confidence interval", y=0.065), colour="blue", size = 4)
+    
+    ManUnitedSimulation = unname(unlist(mc[13,]))
+    (plt = ggplot(data.frame(x = ManUnitedSimulation)) +
+        geom_histogram(aes(x = x, y =..density..), color = "white", fill="red"))
+    alpha = 0.05
+    ManUnited_point_CI_95 = quantile(ManUnitedSimulation, c(alpha/2, 1-alpha/2))
+    ManUnited_point_CI_90 = quantile(ManUnitedSimulation, c(alpha, 1-alpha))
+    plt + geom_vline(xintercept = ManUnited_point_CI_90, col = "green", linetype = "dashed") +
+      geom_vline(xintercept = ManUnited_point_CI_95, col = "blue", linetype = "dashed") +  
+      xlab('Man United Predicted Points For 21-22 Season (n = 1000)') +
+      geom_text(aes(x=80, label=" 90% confidence interval", y=0.07), colour="green", size = 4)+
+      geom_text(aes(x=80, label=" 95% confidence interval", y=0.065), colour="blue", size = 4)
+    
+    #End of plot--------------------------------------------------
+    results <- mc %>% 
+      rowSums() %>% 
+      as.data.frame()
+    
+    colnames(results) <- "Points"
+    
+    results_mc <- results %>%  
+      mutate(Rank = dense_rank(desc(Points))) %>% 
+      mutate(Points = round(Points/n, 0)) %>% 
+      arrange(Rank)
+    
+    return(results_mc)
+  }
+  
+  test <- MCS(1000, pois_par_2122)
+  
+  #-----plot the final predicted result
+  
+  # create data frame for plot
+  # only plot the rank of first five teams
+  nTeam = 5
+  teamNames = row.names(test)[1:nTeam]
+  teamNames = gsub("Man City", "MANCHESTER CITY", teamNames)
+  teamNames = gsub("Spurs", "TOTTENHAM HOTSPUR", teamNames)
+  teamNames = gsub("Leeds", "LEEDS UNITED", teamNames)
+  teamNames = toupper(teamNames)
+  result =  get_rank_and_point(teamNames)
+  rank_of_final_team = result[[1]]
+  point_of_final_team = result[[2]]
+  
+  # add the estimated result
+  rank_of_final_team = cbind(rank_of_final_team, test$Rank[1:5])
+  point_of_final_team = cbind(point_of_final_team, test$Points[1:5])
+  finalSeasonsPlot = seq(from = 2013, to = 2021)
+  rownames(rank_of_final_team) = teamNames
+  colnames(rank_of_final_team) = finalSeasonsPlot
+  rownames(point_of_final_team) = teamNames
+  colnames(point_of_final_team) = finalSeasonsPlot
+  
+  
+  rank_of_final_team_df = data.frame(
+    Seasons = finalSeasonsPlot
+  )
+  point_of_final_team_df = data.frame(
+    Seasons = finalSeasonsPlot
+  )
+  for (i in 1:length(teamNames)) {
+    rank_of_final_team_df[, teamNames[i]] = rank_of_final_team[i,]
+    point_of_final_team_df[, teamNames[i]] = point_of_final_team[i,]
+  }
+  
+  rank_of_final_team_df = melt(rank_of_final_team_df ,  id.vars = 'Seasons', variable.name = 'Teams')
+  point_of_final_team_df = melt(point_of_final_team_df ,  id.vars = 'Seasons', variable.name = 'Teams')
+  
+  # plot the change of rank 
+  finalSeasons =  c("13-14", "14-15", "15-16", "16-17", "17-18", 
+                  "18-19", "19-20",  "20-21", "Current")
+  
+  (plt =  ggplot(data=na.omit(rank_of_final_team_df), aes(Seasons,value)) + 
+      geom_line(aes(colour = Teams)) + 
+      scale_y_continuous(breaks= pretty_breaks(), trans = "reverse") +
+      scale_x_continuous(breaks = finalSeasonsPlot, label = finalSeasons) + 
+      ylab("Rank") +
+      ggtitle("Rank Predictation") +
+      theme(plot.title = element_text(hjust = 0.5))
+  )
+  
+  (plt =  ggplot(data=na.omit(point_of_final_team_df), aes(Seasons,value)) + 
+      geom_line(aes(colour = Teams)) + 
+      scale_y_continuous(breaks= pretty_breaks()) +
+      scale_x_continuous(breaks = finalSeasonsPlot, label = finalSeasons) + 
+      ylab("Point") +
+      ggtitle("Pint Predictation") +
+      theme(plot.title = element_text(hjust = 0.5))
+  )
   
