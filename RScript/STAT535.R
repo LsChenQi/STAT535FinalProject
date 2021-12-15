@@ -141,14 +141,14 @@ data_processing = function(x, n){
     result = vector()
     for(i in 1:length(temp_2)){
       home[i] = substr(temp_2[i], 1, 1)
-      away[i] = substr(temp_2[1], 5, 5)
+      away[i] = substr(temp_2[i], 5, 5)
       result[2*i-1] = home[i]
       result[2*i] = away[i]
     }
     done = na.exclude(result) # remove all NAs
     return(done)
   }
-  
+
   matches = cbind(teams_processing(result_1617_html), goals_processing(result_1617_html),
                   teams_processing(result_1718_html), goals_processing(result_1718_html),
                   teams_processing(result_1819_html), goals_processing(result_1819_html),
@@ -219,7 +219,7 @@ data_processing = function(x, n){
   rank_of_proming_team_df = data.frame(
                             Seasons = tail(seasonsPlot, nSeasons)
                             )
-  for (i in 1:length(promising_team)) {
+  for (i in 1:5) {
     rank_of_proming_team_df[, promising_team[i]] = rank_of_proming_team[i,]
   }
   
@@ -228,7 +228,7 @@ data_processing = function(x, n){
   point_of_proming_team_df = data.frame(
     Seasons = tail(seasonsPlot, nSeasons)
   )
-  for (i in 1:length(promising_team)) {
+  for (i in 1:5) {
     point_of_proming_team_df[, promising_team[i]] = point_of_proming_team[i,]
   }
   
@@ -240,7 +240,7 @@ data_processing = function(x, n){
           scale_y_continuous(breaks= pretty_breaks(), trans = "reverse") +
           scale_x_continuous(breaks = tail(seasonsPlot, nSeasons), label = tail(allSeasons, nSeasons)) + 
           ylab("Rank") +
-          ggtitle("Every team's rank") +
+          ggtitle("Five teams' ranks 2013/14-2020/21") +
           theme(plot.title = element_text(hjust = 0.5))
   )
   # plot the change of points 
@@ -248,8 +248,8 @@ data_processing = function(x, n){
       geom_line(aes(colour = Teams)) + 
       scale_y_continuous(breaks= pretty_breaks()) +
       scale_x_continuous(breaks = tail(seasonsPlot, nSeasons), label = tail(allSeasons, nSeasons)) + 
-      ylab("Rank") +
-      ggtitle("Every team's points") +
+      ylab("Points") +
+      ggtitle("Five teams' points") +
       theme(plot.title = element_text(hjust = 0.5))
   )
   
@@ -450,13 +450,20 @@ data_processing = function(x, n){
     if(x == "West Ham"){
       return("WH")
     }
+    if (x == "Huddersfield"){
+      return("HF")
+    }
+    if(x == "Hull"){
+      return("HU")
+    }
     substr(x, 1, 2)
   })
   team_names_plot = unlist(team_names_plot)
   number_of_games = numeric(3 * length(team_names_plot))
-  number_of_games[seq(1, length(number_of_games), 3)] = HomePower$HWins
-  number_of_games[seq(2, length(number_of_games), 3)] = HomePower$HDraws
-  number_of_games[seq(3, length(number_of_games), 3)] = HomePower$HLoses
+  total_home_games = HomePower$HWins + HomePower$HDraws + HomePower$HLoses
+  number_of_games[seq(1, length(number_of_games), 3)] = HomePower$HWins/total_home_games
+  number_of_games[seq(2, length(number_of_games), 3)] = HomePower$HDraws/total_home_games
+  number_of_games[seq(3, length(number_of_games), 3)] = HomePower$HLoses/total_home_games
   home_match_result = data.frame(
                        Teams=rep(team_names_plot, each=3),
                        Result=rep(c("Win", "Draw", "Lose"), length(team_names_plot)),
@@ -464,7 +471,7 @@ data_processing = function(x, n){
   
   (ggplot(data=home_match_result, aes(x=Teams, y=Number, fill=Result)) +
          geom_bar(stat="identity") +
-         ylab("Number of matches") +
+         ylab("Density") +
          ggtitle("Home team performance") +
          theme(plot.title = element_text(hjust = 0.5)))
   
@@ -487,13 +494,20 @@ data_processing = function(x, n){
     if(x == "West Ham"){
       return("WH")
     }
+    if (x == "Huddersfield"){
+      return("HF")
+    }
+    if(x == "Hull"){
+      return("HU")
+    }
     substr(x, 1, 2)
   })
   team_names_away_plot = unlist(team_names_away_plot)
   number_of_games_away = numeric(3 * length(team_names_away_plot))
-  number_of_games_away[seq(1, length(number_of_games_away), 3)] = AwayPower$AWins
-  number_of_games_away[seq(2, length(number_of_games_away), 3)] = AwayPower$ADraws
-  number_of_games_away[seq(3, length(number_of_games_away), 3)] = AwayPower$ALoses
+  total_away_games = AwayPower$AWins + AwayPower$ADraws + AwayPower$ALoses
+  number_of_games_away[seq(1, length(number_of_games_away), 3)] = AwayPower$AWins/total_away_games
+  number_of_games_away[seq(2, length(number_of_games_away), 3)] = AwayPower$ADraws/total_away_games
+  number_of_games_away[seq(3, length(number_of_games_away), 3)] = AwayPower$ALoses/total_away_games
   away_match_result = data.frame(
     Teams=rep(team_names_away_plot, each=3),
     Result=rep(c("Win", "Draw", "Lose"), length(team_names_away_plot)),
@@ -501,14 +515,18 @@ data_processing = function(x, n){
   
   (ggplot(data=away_match_result, aes(x=Teams, y=Number, fill=Result)) +
       geom_bar(stat="identity") +
-      ylab("Number of matches") +
+      ylab("Density") +
       ggtitle("Away team performance") +
       theme(plot.title = element_text(hjust = 0.5)))
   
   
   #-----end of plot------------------------------------
   
+  gftest_H <- goodfit(test_data$FTHG, type = "poisson", method = "ML")
+  summary(gftest_H)
   
+  gftest_A <- goodfit(test_data$FTAG, type = "poisson", method = "ML")
+  summary(gftest_A)
   # But not the overall sample is not representative for every team, as strong teams like Man City will still dominate in away matches and score at least two goals most of the times.
   test_data %>% 
     group_by(AwayTeam, FTAG) %>%
@@ -636,10 +654,10 @@ data_processing = function(x, n){
     ManCity_point_CI_95 = quantile(ManCitySimulation, c(alpha/2, 1-alpha/2))
     ManCity_point_CI_90 = quantile(ManCitySimulation, c(alpha, 1-alpha))
     plt + geom_vline(xintercept = ManCity_point_CI_90, col = "green", linetype = "dashed") +
-          geom_vline(xintercept = ManCity_point_CI_95, col = "blue", linetype = "dashed") +  
-          xlab('Man City Predicted Points For 21-22 Season (n = 1000)') +
-          geom_text(aes(x=80, label=" 90% confidence interval", y=0.07), colour="green", size = 4)+
-          geom_text(aes(x=80, label=" 95% confidence interval", y=0.065), colour="blue", size = 4)
+      geom_vline(xintercept = ManCity_point_CI_95, col = "blue", linetype = "dashed") +  
+      xlab('Man City Predicted Points For 21-22 Season (n = 1000)') +
+      geom_text(aes(x=80, label=" 90% confidence interval", y=0.07), colour="green", size = 4)+
+      geom_text(aes(x=80, label=" 95% confidence interval", y=0.065), colour="blue", size = 4)
     
     ManUnitedSimulation = unname(unlist(mc[13,]))
     (plt = ggplot(data.frame(x = ManUnitedSimulation)) +
@@ -669,6 +687,10 @@ data_processing = function(x, n){
   }
   
   test <- MCS(1000, pois_par_2122)
+  
+  test
+  
+  
   
   #-----plot the final predicted result
   
