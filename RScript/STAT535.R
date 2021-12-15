@@ -413,7 +413,7 @@ data_processing = function(x, n){
   # Summarize away power
   AwayPower <- test_data %>% 
     group_by(AwayTeam) %>% 
-    summarize(AWins = sum(FTR == "A"), ADraws = sum(FTR == "D"), ALoses = sum(FTR == "A"),
+    summarize(AWins = sum(FTR == "A"), ADraws = sum(FTR == "D"), ALoses = sum(FTR == "H"),
               AP = 3 * AWins + 1 * ADraws, APower = AP / (19*3*3)) 
   
   # Distribution of number of home goals for each team
